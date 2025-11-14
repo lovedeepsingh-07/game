@@ -57,7 +57,22 @@ target_include_directories(${PROJECT_NAME}_server PRIVATE
 # ------ game_client ------
 set(CLIENT_INCLUDE_FILES client/include)
 set(CLIENT_SRC_FILES
+	client/src/observers/_observers.cpp
+	client/src/observers/game_quit.cpp
+	client/src/observers/scene_manager.cpp
+	client/src/scenes/game.cpp
+	client/src/scenes/main_menu.cpp
+	client/src/systems/render/_render.cpp
+	client/src/systems/_systems.cpp
+	client/src/systems/global_events.cpp
+	client/src/user_interface/game.cpp
+	client/src/user_interface/main_menu.cpp
+	client/src/app_utils.cpp
+	client/src/clay_raylib.cpp
+	client/src/components.cpp
 	client/src/main.cpp
+	client/src/phases.cpp
+	client/src/pipelines.cpp
 )
 add_executable(${PROJECT_NAME}_client ${CLIENT_SRC_FILES} ${IMGUI_SOURCES} ${RLIMGUI_SOURCES})
 target_link_libraries(${PROJECT_NAME}_client PRIVATE
@@ -67,6 +82,7 @@ target_link_libraries(${PROJECT_NAME}_client PRIVATE
 )
 target_include_directories(${PROJECT_NAME}_client PRIVATE
 	${CLIENT_INCLUDE_FILES}
+	${EXTERNAL_DIR}/clay
 	${EXTERNAL_DIR}/imgui
 	${EXTERNAL_DIR}/rlimgui
 )
