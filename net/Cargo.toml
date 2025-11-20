@@ -1,0 +1,22 @@
+[package]
+name = "net"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["staticlib"]
+
+[profile.release]
+debug = true
+panic = "abort"
+
+[profile.dev]
+panic = "abort"
+
+[dependencies]
+cxx = "1.0.188"
+renet = "1.2.0"
+renet_netcode = "1.2.0"
+
+[build-dependencies]
+cxx-build = "1.0.188"

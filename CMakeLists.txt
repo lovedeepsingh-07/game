@@ -10,7 +10,8 @@ project("game")
 set(EXTERNAL_DIR deps)
 add_subdirectory(${EXTERNAL_DIR}/fmt)
 add_subdirectory(${EXTERNAL_DIR}/flecs)
-add_subdirectory(${EXTERNAL_DIR}/enet)
+# add_subdirectory(${EXTERNAL_DIR}/enet)
+add_subdirectory(net ${CMAKE_BINARY_DIR}/net)
 add_subdirectory(${EXTERNAL_DIR}/raylib)
 set(IMGUI_SOURCES
     ${EXTERNAL_DIR}/imgui/imgui.cpp
@@ -32,11 +33,12 @@ set(COMMON_SRC_FILES
 )
 add_library(${PROJECT_NAME}_common ${COMMON_SRC_FILES})
 target_link_libraries(${PROJECT_NAME}_common PUBLIC
-	enet
+	# enet
+	net
 	fmt::fmt
 )
 target_include_directories(${PROJECT_NAME}_common PUBLIC
-	${EXTERNAL_DIR}/enet/include
+	# ${EXTERNAL_DIR}/enet/include
 	${EXTERNAL_DIR}/flatbuffers/include
 	${COMMON_INCLUDE_FILES}
 )

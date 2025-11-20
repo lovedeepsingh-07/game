@@ -4,35 +4,40 @@
 #include <clay_raylib.hpp>
 
 void systems::render::setup(flecs::world& registry) {
-    registry.system()
+    registry.system("Begin Rendering")
         .kind<components::phases::OnRender_Start>()
         .run([](flecs::iter& iter) {
             BeginDrawing();
             ClearBackground(BLACK);
         })
         .add<components::scenes::Common>();
-    registry.system<components::Rectangle, components::Position>()
+
+    registry
+        .system<components::Rectangle, components::Position>("Render Rectangles")
         .kind<components::phases::OnRender_Game>()
         .each([](flecs::entity curr_entity, const components::Rectangle& rect,
                  const components::Position& pos) {
-            DrawRectangle((int)pos.x, (int)pos.y, (int)rect.width, (int)rect.height, BLUE);
+            DrawRectangle((int)pos.x, (int)pos.y, (int)rect.width, (int)rect.height, rect.color);
         })
-        .add<components::scenes::MainMenu>();
-    registry.system<components::Rectangle, components::Position>()
+        .add<components::scenes::Common>();
+
+    registry.system<components::Circle, components::Position>("Render Circles")
         .kind<components::phases::OnRender_Game>()
-        .each([](flecs::entity curr_entity, const components::Rectangle& rect,
+        .each([](flecs::entity curr_entity, const components::Circle& circle,
                  const components::Position& pos) {
-            DrawRectangle((int)pos.x, (int)pos.y, (int)rect.width, (int)rect.height, RED);
+            DrawCircle((int)pos.x, (int)pos.y, circle.radius, circle.color);
         })
-        .add<components::scenes::Game>();
-    registry.system<components::Text, components::Position>()
+        .add<components::scenes::Common>();
+
+    registry.system<components::Text, components::Position>("Render Text")
         .kind<components::phases::OnRender_UI>()
         .each([](flecs::entity curr_entity, const components::Text& text,
                  const components::Position& pos) {
             DrawText(text.text.c_str(), (int)pos.x, (int)pos.y, text.font_size, text.color);
         })
         .add<components::scenes::Common>();
-    registry.system()
+
+    registry.system("Render User Interface")
         .kind<components::phases::OnRender_UI>()
         .run([](flecs::iter& iter) {
             flecs::world registry = iter.world();
@@ -61,7 +66,13 @@ void systems::render::setup(flecs::world& registry) {
             Clay_Raylib_Render(render_commands, game_fonts.font_list.data());
         })
         .add<components::scenes::Common>();
-    registry.system()
+
+    registry.system("Debug Rendering")
+        .kind<components::phases::OnRender_Debug>()
+        .run([](flecs::iter& iter) {})
+        .add<components::scenes::Game>();
+
+    registry.system("Finish Rendering")
         .kind<components::phases::OnRender_Finish>()
         .run([](flecs::iter& iter) { EndDrawing(); })
         .add<components::scenes::Common>();

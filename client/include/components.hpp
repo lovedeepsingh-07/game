@@ -39,9 +39,15 @@ namespace components {
     namespace events {
         struct GameQuitEvent {};
     };
+
+    struct Controller {};
     struct Position {
         float x;
         float y;
+    };
+    struct Circle {
+        float radius;
+        Color color;
     };
     struct Rectangle {
         float width;

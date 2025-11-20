@@ -1,12 +1,14 @@
 #include "components.hpp"
 #include "systems.hpp"
 #include <clay/clay.h>
+#include <common/common.hpp>
 
 void systems::global_events(flecs::world& registry) {
-    registry.system()
+    registry.system("Handle Global Events")
         .kind<components::phases::OnUpdate>()
         .run([](flecs::iter& iter) {
             flecs::world registry = iter.world();
+
             if (WindowShouldClose()) {
                 registry.add<components::events::GameQuitEvent>();
             }
