@@ -1,15 +1,11 @@
 #include "layout.hpp"
 #include <raylib.h>
 
-void pages::debug(PageEngine& page_e, Context& ctx) {
+void layout::pages::debug(Document& doc, Context& ctx) {
     CLAY(Clay_ElementDeclaration{
-        .id = CLAY_ID("main_container"),
-        .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
-                    .padding = CLAY_PADDING_ALL(16),
-                    .childGap = 16,
+        .layout = { .sizing = { .width = CLAY_SIZING_GROW(), .height = CLAY_SIZING_GROW() },
                     .layoutDirection = CLAY_TOP_TO_BOTTOM },
-        .backgroundColor =
-            common::to_clay_color(ctx.theme_e.get_color(Color_ID::BACKGROUND)) }) {
+    }) {
         // ------ redirect button ------
         CLAY(Clay_ElementDeclaration{
             .id = CLAY_ID("redirect_button"),
@@ -22,7 +18,7 @@ void pages::debug(PageEngine& page_e, Context& ctx) {
             .border = { .color = common::to_clay_color(ctx.theme_e.get_color(Color_ID::BORDER)),
                         .width = { 1, 1, 1, 1, 0 } } }) {
             if (Clay_Hovered() && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                page_e.set_curr_page("login");
+                doc.set_curr_page("login");
             }
             CLAY_TEXT(
                 CLAY_STRING("redirect"),
@@ -33,6 +29,8 @@ void pages::debug(PageEngine& page_e, Context& ctx) {
                 })
             );
         };
+
+        // ------ fg/bg color display ------
         CLAY(Clay_ElementDeclaration{
             .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_FIT(0) },
                         .childGap = 20,

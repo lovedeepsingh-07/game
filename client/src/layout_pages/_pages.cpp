@@ -1,8 +1,8 @@
 #include "layout.hpp"
 
-void pages::setup(PageEngine& page_e) {
-    page_e.add_page("debug", pages::debug);
-    page_e.add_page("login", pages::login);
+void layout::pages::setup(Document& doc) {
+    doc.add_page("debug", layout::pages::debug);
+    doc.add_page("login", layout::pages::login);
 
-    page_e.set_curr_page("debug");
+    doc.set_curr_page("login");
 }

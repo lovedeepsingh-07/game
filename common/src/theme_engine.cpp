@@ -35,7 +35,8 @@ void ThemeEngine::setup() {
                            { Color_ID::SIDEBAR_ACCENT_FOREGROUND, { 51, 51, 51, 255 } },
                            { Color_ID::SIDEBAR_BORDER, { 243, 232, 255, 255 } },
                            { Color_ID::SIDEBAR_RING, { 236, 72, 153, 255 } } },
-               .radius = 6.0F }
+               .radius = 6.0F,
+               .border_width = { .left = 1, .right = 4, .top = 1, .bottom = 4 } }
     );
 
     this->add_theme(
@@ -72,7 +73,8 @@ void ThemeEngine::setup() {
                            { Color_ID::SIDEBAR_ACCENT_FOREGROUND, { 31, 41, 55, 255 } },
                            { Color_ID::SIDEBAR_BORDER, { 55, 65, 81, 255 } },
                            { Color_ID::SIDEBAR_RING, { 236, 72, 153, 255 } } },
-               .radius = 6.0F }
+               .radius = 6.0F,
+               .border_width = { .left = 1, .right = 4, .top = 1, .bottom = 4 } }
     );
 }
 
@@ -113,4 +115,8 @@ common::Color ThemeEngine::get_color(const Color_ID& color_id) {
 
 float ThemeEngine::get_radius() {
     return m_themes.at(m_curr_theme_id).radius;
+}
+
+Clay_BorderWidth ThemeEngine::get_border_width() {
+    return m_themes.at(m_curr_theme_id).border_width;
 }

@@ -5,7 +5,7 @@
 #include <common/context.hpp>
 
 int main() {
-    Clay_Raylib_Initialize(1280, 720, "game", FLAG_WINDOW_RESIZABLE);
+    Clay_Raylib_Initialize(540, 750, "game", FLAG_WINDOW_RESIZABLE);
 
     // clay setup
     uint64_t clay_required_memory = Clay_MinMemorySize();
@@ -29,13 +29,25 @@ int main() {
     ctx.setup();
     ctx.theme_e.set_curr_theme("dark");
 
-    // page engine
-    PageEngine page_e;
-    pages::setup(page_e);
+    // DOM
+    Document doc;
+    layout::pages::setup(doc);
 
     while (!WindowShouldClose()) {
         // clear the frame memory arena at the starting of every frame
         ctx.frame_arena.clear();
+
+        // TODO: some debugging specific code
+        if (IsKeyPressed(KEY_ZERO)) {
+            doc.set_curr_page("debug");
+        } else if (IsKeyPressed(KEY_ONE)) {
+            doc.set_curr_page("login");
+        }
+
+        // debugging mode toggle
+        if (IsKeyPressed(KEY_F9)) {
+            Clay_SetDebugModeEnabled(!Clay_IsDebugModeEnabled());
+        }
 
         // window state
         Vector2 mouse_pos = GetMousePosition();
@@ -52,49 +64,16 @@ int main() {
         );
 
         Clay_BeginLayout();
-
-        // ------ theme button ------
+        layout::components::navbar(ctx);
         CLAY(Clay_ElementDeclaration{
-            .id = CLAY_ID("theme_button"),
-            .layout = { .sizing = { .width = CLAY_SIZING_FIT(92), .height = CLAY_SIZING_FIT(20) },
-                        .padding = { .left = 8, .right = 8, .top = 6, .bottom = 6 },
-                        .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_CENTER },
+            .id = CLAY_ID("main_container"),
+            .layout = { .sizing = { .width = CLAY_SIZING_GROW(0), .height = CLAY_SIZING_GROW(0) },
+                        .padding = { .left = 16, .right = 16, .top = 60, .bottom = 16 },
                         .layoutDirection = CLAY_TOP_TO_BOTTOM },
-            .backgroundColor = common::to_clay_color(ctx.theme_e.get_color(Color_ID::PRIMARY)),
-            .cornerRadius = CLAY_CORNER_RADIUS(ctx.theme_e.get_radius()),
-            .floating = { .attachPoints = { .element = CLAY_ATTACH_POINT_RIGHT_TOP,
-                                            .parent = CLAY_ATTACH_POINT_RIGHT_TOP },
-                          .pointerCaptureMode = CLAY_POINTER_CAPTURE_MODE_CAPTURE,
-                          .attachTo = CLAY_ATTACH_TO_ROOT },
-            .border = { .color = common::to_clay_color(ctx.theme_e.get_color(Color_ID::BORDER)),
-                        .width = { 1, 1, 1, 1, 0 } } }) {
-            if (Clay_Hovered() && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                if (ctx.theme_e.get_curr_theme() == "dark") {
-                    ctx.theme_e.set_curr_theme("light");
-                } else {
-                    ctx.theme_e.set_curr_theme("dark");
-                }
-            }
-            CLAY_TEXT(
-                CLAY_STRING("theme"),
-                CLAY_TEXT_CONFIG(Clay_TextElementConfig{
-                    .textColor = common::to_clay_color(ctx.theme_e.get_color(Color_ID::PRIMARY_FOREGROUND)),
-                    .fontId = 0,
-                    .fontSize = 20,
-                })
-            );
-        };
-
-        // ------ render current page ------
-        page_e.render_curr_page(page_e, ctx);
-
-        // TODO: this needs to be removed, not right now, but someday
-        if (IsKeyPressed(KEY_ONE)) {
-            page_e.set_curr_page("debug");
-        } else if (IsKeyPressed(KEY_TWO)) {
-            page_e.set_curr_page("login");
+            .backgroundColor =
+                common::to_clay_color(ctx.theme_e.get_color(Color_ID::BACKGROUND)) }) {
+            doc.render_curr_page(doc, ctx);
         }
-
         Clay_RenderCommandArray renderCommands = Clay_EndLayout();
 
         BeginDrawing();

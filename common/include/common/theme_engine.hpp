@@ -46,6 +46,7 @@ struct Color_ID_Hash {
 struct Theme {
     std::unordered_map<Color_ID, common::Color, Color_ID_Hash> colors;
     float radius;
+    Clay_BorderWidth border_width;
 };
 
 class ThemeEngine {
@@ -70,4 +71,5 @@ class ThemeEngine {
     const std::string& get_curr_theme();
     common::Color get_color(const Color_ID& color_id);
     float get_radius();
+    Clay_BorderWidth get_border_width();
 };
