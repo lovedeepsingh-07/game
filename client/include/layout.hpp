@@ -10,6 +10,7 @@ namespace layout {
     namespace pages {
         void debug(Document& doc, Context& ctx);
         void login(Document& doc, Context& ctx);
+        void chat(Document& doc, Context& ctx);
 
         void setup(Document& doc);
     }

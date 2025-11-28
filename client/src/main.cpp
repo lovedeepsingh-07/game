@@ -33,6 +33,9 @@ int main() {
     Document doc;
     layout::pages::setup(doc);
 
+    // network client setup
+    net::setup_client();
+
     while (!WindowShouldClose()) {
         // clear the frame memory arena at the starting of every frame
         ctx.frame_arena.clear();
@@ -42,6 +45,8 @@ int main() {
             doc.set_curr_page("debug");
         } else if (IsKeyPressed(KEY_ONE)) {
             doc.set_curr_page("login");
+        } else if (IsKeyPressed(KEY_TWO)) {
+            doc.set_curr_page("chat");
         }
 
         // debugging mode toggle

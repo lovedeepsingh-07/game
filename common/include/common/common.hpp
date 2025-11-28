@@ -4,6 +4,7 @@
 #include <fmt/base.h>
 #include <fmt/color.h>
 #include <fmt/format.h>
+#include <net.h>
 #include <string>
 
 

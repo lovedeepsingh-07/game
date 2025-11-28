@@ -1,9 +1,18 @@
 #include "layout.hpp"
 #include <common/theme_engine.hpp>
+#include <raylib.h>
 
 constexpr int min_card_width = 320;
+bool trying_to_connect = false;
 
 void layout::pages::login(Document& doc, Context& ctx) {
+    if (trying_to_connect) {
+        net::update_client((uint64_t)GetFrameTime());
+        if (net::is_client_connected()) {
+            trying_to_connect = false;
+            doc.set_curr_page("chat");
+        }
+    }
     CLAY(Clay_ElementDeclaration{
         .layout = { .sizing = { .width = CLAY_SIZING_GROW(), .height = CLAY_SIZING_GROW() },
                     .padding = { .top = 160 },
@@ -36,16 +45,23 @@ void layout::pages::login(Document& doc, Context& ctx) {
                 layout::components::login_input(doc, ctx, "username_input", "Username");
                 layout::components::login_input(doc, ctx, "address_input", "Address");
             }
-            if (layout::components::login_button(doc, ctx, "login_button", "Login")) {
-                auto* username_input =
-                    doc.get_element<elements::Input>("username_input");
-                auto* address_input =
-                    doc.get_element<elements::Input>("address_input");
-                common::info(fmt::format(
-                    "clicked the input button with username: {}, address: {}",
-                    common::trim_whitespace(username_input->value),
-                    common::trim_whitespace(address_input->value)
-                ));
+            if (layout::components::login_button(
+                    doc, ctx, "login_button", net::is_client_connecting() ? "Connecting..." : "Login"
+                )) {
+                std::string username_input = common::trim_whitespace(
+                    doc.get_element<elements::Input>("username_input")->value
+                );
+                std::string address_input = common::trim_whitespace(
+                    doc.get_element<elements::Input>("address_input")->value
+                );
+                if (username_input.size() == 0 || address_input.size() == 0) {
+                    common::error("username or address cannot be empty");
+                } else {
+                    common::info(fmt::format("clicked the input button with username: {}, address: {}", username_input, address_input)
+                    );
+                }
+
+                trying_to_connect = true;
             };
         }
     }
