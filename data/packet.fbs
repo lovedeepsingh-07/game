@@ -1,0 +1,14 @@
+namespace packet;
+
+table Message {
+	message:string;
+}
+
+union Packet_Data {
+	Message,
+}
+table Packet {
+	data:Packet_Data;
+}
+
+root_type Packet;

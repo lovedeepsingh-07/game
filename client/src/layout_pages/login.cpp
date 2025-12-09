@@ -52,7 +52,8 @@ void layout::pages::login(Document& doc, Context& ctx) {
             }
             if (layout::components::login_button(
                     doc, ctx, "login_button", net::client::is_connecting() ? "Connecting..." : "Login"
-                )) {
+                )
+                && !trying_to_connect) {
                 std::string username_input = common::trim_whitespace(
                     doc.get_element<elements::Input>("username_input")->value
                 );
@@ -62,11 +63,9 @@ void layout::pages::login(Document& doc, Context& ctx) {
                 if (username_input.size() == 0 || address_input.size() == 0) {
                     common::error("username or address cannot be empty");
                 } else {
-                    common::info(fmt::format("login with username: {}, address: {}", username_input, address_input)
-                    );
+                    net::client::setup(username_input, address_input);
+                    trying_to_connect = true;
                 }
-
-                trying_to_connect = true;
             };
         }
     }

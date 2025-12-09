@@ -13,18 +13,18 @@ struct Client_State {
 }
 static CLIENT_STATE: OnceLock<Mutex<Client_State>> = OnceLock::new();
 
-pub fn client_setup() {
+pub fn client_setup(username: String, address: String) {
     let client = renet::RenetClient::new(renet::ConnectionConfig::default());
 
     let current_time = std::time::SystemTime::now()
         .duration_since(std::time::SystemTime::UNIX_EPOCH)
         .unwrap();
-    let server_address: std::net::SocketAddr = "127.0.0.1:9090".parse().unwrap();
+    let server_address: std::net::SocketAddr = address.parse().unwrap();
 
     let authentication = netcode::ClientAuthentication::Unsecure {
         server_addr: server_address,
         client_id: rand::random::<u64>(),
-        user_data: None,
+        user_data: Some(crate::to_netcode_user_data(username.as_str())),
         protocol_id: constants::PROTOCOL_ID,
     };
 
@@ -49,7 +49,12 @@ pub fn client_is_connected() -> bool {
 }
 
 pub fn client_is_connecting() -> bool {
-    let mut mutex_gaurd = CLIENT_STATE.get().unwrap().lock().unwrap();
+    let mut mutex_gaurd = match CLIENT_STATE.get(){
+        Some(out) => {out},
+        None => {
+            return false;
+        }
+    }.lock().unwrap();
     let Client_State {
         connected,
         connection_start_time,
@@ -71,15 +76,13 @@ pub fn client_connect(delta_time_ms: u64) {
         connection_start_time,
     } = &mut *mutex_gaurd;
 
-    let timeout = std::time::Duration::from_secs(5);
-
     if !*connected && connection_start_time.is_none() {
         *connection_start_time = Some(std::time::Instant::now());
     }
 
     if !*connected {
         if let Some(start_time) = connection_start_time {
-            if start_time.elapsed() > timeout {
+            if start_time.elapsed() > constants::CLIENT_CONNECT_TIMEOUT {
                 *connection_start_time = None;
                 debug::error("failed to connect to server, timed out");
                 return;
@@ -109,10 +112,6 @@ pub fn client_update(delta_time_ms: u64) {
 
     client.update(delta_time);
     transport.update(delta_time, client).unwrap();
-    // while let Some(message) = client.receive_message(renet::DefaultChannel::ReliableOrdered) {
-    //     debug::info(format!("server_message: {:#?}", String::from_utf8(message.to_vec()).unwrap()).as_str());
-    // }
-    // client.send_message(renet::DefaultChannel::ReliableOrdered, "client text");
 }
 
 pub fn client_poll_messages() -> Vec<String> {

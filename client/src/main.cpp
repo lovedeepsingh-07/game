@@ -4,7 +4,6 @@
 #include <common/common.hpp>
 #include <common/constants.hpp>
 #include <common/context.hpp>
-#include <net.h>
 
 int main() {
     Clay_Raylib_Initialize(540, 750, "boron", FLAG_WINDOW_RESIZABLE);
@@ -35,9 +34,6 @@ int main() {
     // DOM
     Document doc;
     layout::pages::setup(doc);
-
-    // network client setup
-    net::client::setup();
 
     while (!WindowShouldClose()) {
         // clear the memory arena(s) at the starting of every frame

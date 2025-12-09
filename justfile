@@ -21,5 +21,6 @@ runw component: build
 	@wine build/windows/{{BINARY_NAME}}_{{component}}.exe
 
 gen:
-	@mkdir -p common/include/generated
+	@mkdir -p common/include/generated net/src/generated
 	@flatc -o ./common/include/generated/ ./data/packet.fbs --cpp --filename-suffix _
+	@flatc -o ./net/src/generated ./data/packet.fbs --rust --filename-suffix _

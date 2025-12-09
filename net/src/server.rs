@@ -44,7 +44,12 @@ pub fn server_update(delta_time_ms: u64) {
     while let Some(event) = server.get_event() {
         match event {
             renet::ServerEvent::ClientConnected { client_id } => {
-                debug::info(format!("Client {} connected", client_id).as_str());
+                if let Some(user_data) = transport.user_data(client_id){
+                    let username = crate::from_user_data(&user_data);
+                    debug::info(format!("Client {} connected as {}", client_id, username).as_str());
+                } else {
+                    debug::info(format!("Client {} connected", client_id).as_str());
+                }
             }
             renet::ServerEvent::ClientDisconnected { client_id, reason } => {
                 debug::info(
