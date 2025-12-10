@@ -65,15 +65,21 @@ bool VerifyPacket_DataVector(::flatbuffers::Verifier &verifier, const ::flatbuff
 struct Message FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef MessageBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
-    VT_MESSAGE = 4
+    VT_USERNAME = 4,
+    VT_BODY = 6
   };
-  const ::flatbuffers::String *message() const {
-    return GetPointer<const ::flatbuffers::String *>(VT_MESSAGE);
+  const ::flatbuffers::String *username() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_USERNAME);
+  }
+  const ::flatbuffers::String *body() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_BODY);
   }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyOffset(verifier, VT_MESSAGE) &&
-           verifier.VerifyString(message()) &&
+           VerifyOffset(verifier, VT_USERNAME) &&
+           verifier.VerifyString(username()) &&
+           VerifyOffset(verifier, VT_BODY) &&
+           verifier.VerifyString(body()) &&
            verifier.EndTable();
   }
 };
@@ -82,8 +88,11 @@ struct MessageBuilder {
   typedef Message Table;
   ::flatbuffers::FlatBufferBuilder &fbb_;
   ::flatbuffers::uoffset_t start_;
-  void add_message(::flatbuffers::Offset<::flatbuffers::String> message) {
-    fbb_.AddOffset(Message::VT_MESSAGE, message);
+  void add_username(::flatbuffers::Offset<::flatbuffers::String> username) {
+    fbb_.AddOffset(Message::VT_USERNAME, username);
+  }
+  void add_body(::flatbuffers::Offset<::flatbuffers::String> body) {
+    fbb_.AddOffset(Message::VT_BODY, body);
   }
   explicit MessageBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -98,19 +107,24 @@ struct MessageBuilder {
 
 inline ::flatbuffers::Offset<Message> CreateMessage(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    ::flatbuffers::Offset<::flatbuffers::String> message = 0) {
+    ::flatbuffers::Offset<::flatbuffers::String> username = 0,
+    ::flatbuffers::Offset<::flatbuffers::String> body = 0) {
   MessageBuilder builder_(_fbb);
-  builder_.add_message(message);
+  builder_.add_body(body);
+  builder_.add_username(username);
   return builder_.Finish();
 }
 
 inline ::flatbuffers::Offset<Message> CreateMessageDirect(
     ::flatbuffers::FlatBufferBuilder &_fbb,
-    const char *message = nullptr) {
-  auto message__ = message ? _fbb.CreateString(message) : 0;
+    const char *username = nullptr,
+    const char *body = nullptr) {
+  auto username__ = username ? _fbb.CreateString(username) : 0;
+  auto body__ = body ? _fbb.CreateString(body) : 0;
   return packet::CreateMessage(
       _fbb,
-      message__);
+      username__,
+      body__);
 }
 
 struct Packet FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {

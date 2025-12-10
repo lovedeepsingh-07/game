@@ -1,4 +1,4 @@
-use crate::{constants, debug};
+use crate::{constants, debug, packet};
 use renet;
 use renet_netcode as netcode;
 use std::sync::{Mutex, OnceLock};
@@ -67,10 +67,31 @@ pub fn server_update(delta_time_ms: u64) {
         while let Some(message) =
             server.receive_message(client_id, renet::DefaultChannel::ReliableOrdered)
         {
-            let message = String::from_utf8(message.to_vec()).unwrap();
-            debug::info(format!("client {}: {:#?}", client_id, message).as_str());
-            server.broadcast_message_except(
-                client_id,
+            // decode message from flatbuffers's bytes
+            let packet = packet::root_as_packet(&message).unwrap();
+            match packet.data_type() {
+                packet::Packet_Data::Message => {
+                     if let Some(data) = packet.data_as_message(){
+                         let username = match data.username() {
+                             Some(out) => out,
+                             None => {
+                                 "invalid_username"
+                             }
+                         };
+                         let message = match data.body() {
+                             Some(out) => out,
+                             None => {
+                                 "invalid_message"
+                             }
+                         };
+                        debug::info(format!("({}, {}): {:#?}", username, client_id, message).as_str());
+                     }
+                },
+                _ => {
+                    debug::error("invalid packet data type");
+                },
+            }
+            server.broadcast_message(
                 renet::DefaultChannel::ReliableOrdered,
                 message,
             );

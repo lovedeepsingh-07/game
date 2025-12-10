@@ -121,7 +121,8 @@ impl<'a> flatbuffers::Follow<'a> for Message<'a> {
 }
 
 impl<'a> Message<'a> {
-  pub const VT_MESSAGE: flatbuffers::VOffsetT = 4;
+  pub const VT_USERNAME: flatbuffers::VOffsetT = 4;
+  pub const VT_BODY: flatbuffers::VOffsetT = 6;
 
   #[inline]
   pub unsafe fn init_from_table(table: flatbuffers::Table<'a>) -> Self {
@@ -133,17 +134,25 @@ impl<'a> Message<'a> {
     args: &'args MessageArgs<'args>
   ) -> flatbuffers::WIPOffset<Message<'bldr>> {
     let mut builder = MessageBuilder::new(_fbb);
-    if let Some(x) = args.message { builder.add_message(x); }
+    if let Some(x) = args.body { builder.add_body(x); }
+    if let Some(x) = args.username { builder.add_username(x); }
     builder.finish()
   }
 
 
   #[inline]
-  pub fn message(&self) -> Option<&'a str> {
+  pub fn username(&self) -> Option<&'a str> {
     // Safety:
     // Created from valid Table for this object
     // which contains a valid value in this slot
-    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_MESSAGE, None)}
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_USERNAME, None)}
+  }
+  #[inline]
+  pub fn body(&self) -> Option<&'a str> {
+    // Safety:
+    // Created from valid Table for this object
+    // which contains a valid value in this slot
+    unsafe { self._tab.get::<flatbuffers::ForwardsUOffset<&str>>(Message::VT_BODY, None)}
   }
 }
 
@@ -154,19 +163,22 @@ impl flatbuffers::Verifiable for Message<'_> {
   ) -> Result<(), flatbuffers::InvalidFlatbuffer> {
     use self::flatbuffers::Verifiable;
     v.visit_table(pos)?
-     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("message", Self::VT_MESSAGE, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("username", Self::VT_USERNAME, false)?
+     .visit_field::<flatbuffers::ForwardsUOffset<&str>>("body", Self::VT_BODY, false)?
      .finish();
     Ok(())
   }
 }
 pub struct MessageArgs<'a> {
-    pub message: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub username: Option<flatbuffers::WIPOffset<&'a str>>,
+    pub body: Option<flatbuffers::WIPOffset<&'a str>>,
 }
 impl<'a> Default for MessageArgs<'a> {
   #[inline]
   fn default() -> Self {
     MessageArgs {
-      message: None,
+      username: None,
+      body: None,
     }
   }
 }
@@ -177,8 +189,12 @@ pub struct MessageBuilder<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> {
 }
 impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MessageBuilder<'a, 'b, A> {
   #[inline]
-  pub fn add_message(&mut self, message: flatbuffers::WIPOffset<&'b  str>) {
-    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_MESSAGE, message);
+  pub fn add_username(&mut self, username: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_USERNAME, username);
+  }
+  #[inline]
+  pub fn add_body(&mut self, body: flatbuffers::WIPOffset<&'b  str>) {
+    self.fbb_.push_slot_always::<flatbuffers::WIPOffset<_>>(Message::VT_BODY, body);
   }
   #[inline]
   pub fn new(_fbb: &'b mut flatbuffers::FlatBufferBuilder<'a, A>) -> MessageBuilder<'a, 'b, A> {
@@ -198,7 +214,8 @@ impl<'a: 'b, 'b, A: flatbuffers::Allocator + 'a> MessageBuilder<'a, 'b, A> {
 impl core::fmt::Debug for Message<'_> {
   fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
     let mut ds = f.debug_struct("Message");
-      ds.field("message", &self.message());
+      ds.field("username", &self.username());
+      ds.field("body", &self.body());
       ds.finish()
   }
 }

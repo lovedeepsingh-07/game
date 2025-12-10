@@ -1,4 +1,5 @@
-use crate::{constants, debug};
+use crate::{constants, debug, packet};
+use flatbuffers;
 use rand;
 use renet;
 use renet_netcode as netcode;
@@ -6,6 +7,7 @@ use std::sync::{Mutex, OnceLock};
 
 #[allow(non_camel_case_types)]
 struct Client_State {
+    username: String,
     client: renet::RenetClient,
     transport: netcode::NetcodeClientTransport,
     connected: bool,
@@ -34,12 +36,24 @@ pub fn client_setup(username: String, address: String) {
 
     CLIENT_STATE
         .set(Mutex::new(Client_State {
+            username,
             client,
             transport,
             connected: false,
             connection_start_time: None,
         }))
         .ok();
+}
+
+pub fn client_get_username() -> String {
+    let mut mutex_gaurd = match CLIENT_STATE.get(){
+        Some(out) => {out},
+        None => {
+            return String::from("axewbotx");
+        }
+    }.lock().unwrap();
+    let Client_State { username, .. } = &mut *mutex_gaurd;
+    username.to_string()
 }
 
 pub fn client_is_connected() -> bool {
@@ -73,7 +87,7 @@ pub fn client_connect(delta_time_ms: u64) {
         client,
         transport,
         connected,
-        connection_start_time,
+        connection_start_time, ..
     } = &mut *mutex_gaurd;
 
     if !*connected && connection_start_time.is_none() {
@@ -114,22 +128,38 @@ pub fn client_update(delta_time_ms: u64) {
     transport.update(delta_time, client).unwrap();
 }
 
-pub fn client_poll_messages() -> Vec<String> {
+pub fn client_poll_messages() -> Vec<crate::ffi::Message_Bytes> {
     let mut mutex_gaurd = CLIENT_STATE.get().unwrap().lock().unwrap();
     let Client_State { client, .. } = &mut *mutex_gaurd;
 
-    let mut output: Vec<String> = Vec::new();
+    let mut output: Vec<crate::ffi::Message_Bytes> = Vec::new();
     while let Some(message) = client.receive_message(renet::DefaultChannel::ReliableOrdered) {
-        output.push(String::from_utf8(message.to_vec()).unwrap());
+        output.push(crate::ffi::Message_Bytes {data: message.to_vec()});
     }
     return output;
 }
 
 pub fn client_send_message(input: String) {
     let mut mutex_gaurd = CLIENT_STATE.get().unwrap().lock().unwrap();
-    let Client_State { client, .. } = &mut *mutex_gaurd;
+    let Client_State { client, username, .. } = &mut *mutex_gaurd;
 
-    client.send_message(renet::DefaultChannel::ReliableOrdered, input);
+    {
+        let mut builder = flatbuffers::FlatBufferBuilder::with_capacity(1024);
+        let message_username = builder.create_string(username.as_str());
+        let message_body = builder.create_string(input.as_str());
+        let packet_data = packet::Message::create(&mut builder, &packet::MessageArgs{
+            username: Some(message_username),
+            body: Some(message_body),
+        });
+        let packet = packet::Packet::create(&mut builder, &packet::PacketArgs{
+            data_type: packet::Packet_Data::Message,
+            data: Some(packet_data.as_union_value()),
+        });
+        builder.finish(packet, None);
+        let buf = builder.finished_data().to_vec();
+        client.send_message(renet::DefaultChannel::ReliableOrdered, buf);
+    }
+
 }
 
 pub fn client_send_packets() {

@@ -59,7 +59,7 @@ int main() {
         // window state
         Vector2 mouse_pos = GetMousePosition();
         Vector2 scroll_delta =
-            Vector2Scale(GetMouseWheelMoveV(), 2); // scroll delta scaled 2 times
+            Vector2Scale(GetMouseWheelMoveV(), 5); // scroll delta scaled 2 times
         float delta_time = GetFrameTime();
 
         // update clay state

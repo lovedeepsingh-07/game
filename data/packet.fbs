@@ -1,7 +1,8 @@
 namespace packet;
 
 table Message {
-	message:string;
+	username:string;
+	body:string;
 }
 
 union Packet_Data {

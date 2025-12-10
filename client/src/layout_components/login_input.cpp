@@ -11,7 +11,7 @@ void layout::components::login_input(
     doc.add_element(id, std::make_unique<elements::Input>());
     auto* element_ctx = doc.get_element<elements::Input>(id);
 
-    // input state configuration
+    // state configuration
     bool hovering = Clay_PointerOver(input_id);
     if (hovering && IsMouseButtonPressed(MOUSE_BUTTON_LEFT) && !element_ctx->focused) {
         element_ctx->focused = true;

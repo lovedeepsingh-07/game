@@ -13,8 +13,13 @@ use renet_netcode as netcode;
 mod packet_generated;
 pub use packet_generated::packet;
 
+#[allow(non_camel_case_types)]
 #[cxx::bridge(namespace = "net")]
-mod ffi {
+pub mod ffi {
+    struct Message_Bytes {
+        pub data: Vec<u8>
+    }
+
     #[namespace = "net::server"]
     extern "Rust" {
         #[rust_name = "server_setup"]
@@ -29,6 +34,8 @@ mod ffi {
     extern "Rust" {
         #[rust_name = "client_setup"]
         fn setup(username: String, address: String);
+        #[rust_name = "client_get_username"]
+        fn get_username() -> String;
         #[rust_name = "client_is_connected"]
         fn is_connected() -> bool;
         #[rust_name = "client_is_connecting"]
@@ -38,7 +45,7 @@ mod ffi {
         #[rust_name = "client_update"]
         fn update(delta_time_ms: u64);
         #[rust_name = "client_poll_messages"]
-        fn poll_messages() -> Vec<String>;
+        fn poll_messages() -> Vec<Message_Bytes>;
         #[rust_name = "client_send_message"]
         fn send_message(input: String);
         #[rust_name = "client_send_packets"]
