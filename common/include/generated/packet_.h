@@ -18,35 +18,47 @@ namespace packet {
 struct Message;
 struct MessageBuilder;
 
+struct JoinEvent;
+struct JoinEventBuilder;
+
+struct LeaveEvent;
+struct LeaveEventBuilder;
+
 struct Packet;
 struct PacketBuilder;
 
 enum Packet_Data : uint8_t {
   Packet_Data_NONE = 0,
   Packet_Data_Message = 1,
+  Packet_Data_JoinEvent = 2,
+  Packet_Data_LeaveEvent = 3,
   Packet_Data_MIN = Packet_Data_NONE,
-  Packet_Data_MAX = Packet_Data_Message
+  Packet_Data_MAX = Packet_Data_LeaveEvent
 };
 
-inline const Packet_Data (&EnumValuesPacket_Data())[2] {
+inline const Packet_Data (&EnumValuesPacket_Data())[4] {
   static const Packet_Data values[] = {
     Packet_Data_NONE,
-    Packet_Data_Message
+    Packet_Data_Message,
+    Packet_Data_JoinEvent,
+    Packet_Data_LeaveEvent
   };
   return values;
 }
 
 inline const char * const *EnumNamesPacket_Data() {
-  static const char * const names[3] = {
+  static const char * const names[5] = {
     "NONE",
     "Message",
+    "JoinEvent",
+    "LeaveEvent",
     nullptr
   };
   return names;
 }
 
 inline const char *EnumNamePacket_Data(Packet_Data e) {
-  if (::flatbuffers::IsOutRange(e, Packet_Data_NONE, Packet_Data_Message)) return "";
+  if (::flatbuffers::IsOutRange(e, Packet_Data_NONE, Packet_Data_LeaveEvent)) return "";
   const size_t index = static_cast<size_t>(e);
   return EnumNamesPacket_Data()[index];
 }
@@ -57,6 +69,14 @@ template<typename T> struct Packet_DataTraits {
 
 template<> struct Packet_DataTraits<packet::Message> {
   static const Packet_Data enum_value = Packet_Data_Message;
+};
+
+template<> struct Packet_DataTraits<packet::JoinEvent> {
+  static const Packet_Data enum_value = Packet_Data_JoinEvent;
+};
+
+template<> struct Packet_DataTraits<packet::LeaveEvent> {
+  static const Packet_Data enum_value = Packet_Data_LeaveEvent;
 };
 
 bool VerifyPacket_Data(::flatbuffers::Verifier &verifier, const void *obj, Packet_Data type);
@@ -127,6 +147,108 @@ inline ::flatbuffers::Offset<Message> CreateMessageDirect(
       body__);
 }
 
+struct JoinEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef JoinEventBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USERNAME = 4
+  };
+  const ::flatbuffers::String *username() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_USERNAME);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USERNAME) &&
+           verifier.VerifyString(username()) &&
+           verifier.EndTable();
+  }
+};
+
+struct JoinEventBuilder {
+  typedef JoinEvent Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_username(::flatbuffers::Offset<::flatbuffers::String> username) {
+    fbb_.AddOffset(JoinEvent::VT_USERNAME, username);
+  }
+  explicit JoinEventBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<JoinEvent> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<JoinEvent>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<JoinEvent> CreateJoinEvent(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> username = 0) {
+  JoinEventBuilder builder_(_fbb);
+  builder_.add_username(username);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<JoinEvent> CreateJoinEventDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const char *username = nullptr) {
+  auto username__ = username ? _fbb.CreateString(username) : 0;
+  return packet::CreateJoinEvent(
+      _fbb,
+      username__);
+}
+
+struct LeaveEvent FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
+  typedef LeaveEventBuilder Builder;
+  enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
+    VT_USERNAME = 4
+  };
+  const ::flatbuffers::String *username() const {
+    return GetPointer<const ::flatbuffers::String *>(VT_USERNAME);
+  }
+  bool Verify(::flatbuffers::Verifier &verifier) const {
+    return VerifyTableStart(verifier) &&
+           VerifyOffset(verifier, VT_USERNAME) &&
+           verifier.VerifyString(username()) &&
+           verifier.EndTable();
+  }
+};
+
+struct LeaveEventBuilder {
+  typedef LeaveEvent Table;
+  ::flatbuffers::FlatBufferBuilder &fbb_;
+  ::flatbuffers::uoffset_t start_;
+  void add_username(::flatbuffers::Offset<::flatbuffers::String> username) {
+    fbb_.AddOffset(LeaveEvent::VT_USERNAME, username);
+  }
+  explicit LeaveEventBuilder(::flatbuffers::FlatBufferBuilder &_fbb)
+        : fbb_(_fbb) {
+    start_ = fbb_.StartTable();
+  }
+  ::flatbuffers::Offset<LeaveEvent> Finish() {
+    const auto end = fbb_.EndTable(start_);
+    auto o = ::flatbuffers::Offset<LeaveEvent>(end);
+    return o;
+  }
+};
+
+inline ::flatbuffers::Offset<LeaveEvent> CreateLeaveEvent(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    ::flatbuffers::Offset<::flatbuffers::String> username = 0) {
+  LeaveEventBuilder builder_(_fbb);
+  builder_.add_username(username);
+  return builder_.Finish();
+}
+
+inline ::flatbuffers::Offset<LeaveEvent> CreateLeaveEventDirect(
+    ::flatbuffers::FlatBufferBuilder &_fbb,
+    const char *username = nullptr) {
+  auto username__ = username ? _fbb.CreateString(username) : 0;
+  return packet::CreateLeaveEvent(
+      _fbb,
+      username__);
+}
+
 struct Packet FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   typedef PacketBuilder Builder;
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
@@ -143,6 +265,12 @@ struct Packet FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
   const packet::Message *data_as_Message() const {
     return data_type() == packet::Packet_Data_Message ? static_cast<const packet::Message *>(data()) : nullptr;
   }
+  const packet::JoinEvent *data_as_JoinEvent() const {
+    return data_type() == packet::Packet_Data_JoinEvent ? static_cast<const packet::JoinEvent *>(data()) : nullptr;
+  }
+  const packet::LeaveEvent *data_as_LeaveEvent() const {
+    return data_type() == packet::Packet_Data_LeaveEvent ? static_cast<const packet::LeaveEvent *>(data()) : nullptr;
+  }
   bool Verify(::flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<uint8_t>(verifier, VT_DATA_TYPE, 1) &&
@@ -154,6 +282,14 @@ struct Packet FLATBUFFERS_FINAL_CLASS : private ::flatbuffers::Table {
 
 template<> inline const packet::Message *Packet::data_as<packet::Message>() const {
   return data_as_Message();
+}
+
+template<> inline const packet::JoinEvent *Packet::data_as<packet::JoinEvent>() const {
+  return data_as_JoinEvent();
+}
+
+template<> inline const packet::LeaveEvent *Packet::data_as<packet::LeaveEvent>() const {
+  return data_as_LeaveEvent();
 }
 
 struct PacketBuilder {
@@ -194,6 +330,14 @@ inline bool VerifyPacket_Data(::flatbuffers::Verifier &verifier, const void *obj
     }
     case Packet_Data_Message: {
       auto ptr = reinterpret_cast<const packet::Message *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Packet_Data_JoinEvent: {
+      auto ptr = reinterpret_cast<const packet::JoinEvent *>(obj);
+      return verifier.VerifyTable(ptr);
+    }
+    case Packet_Data_LeaveEvent: {
+      auto ptr = reinterpret_cast<const packet::LeaveEvent *>(obj);
       return verifier.VerifyTable(ptr);
     }
     default: return true;

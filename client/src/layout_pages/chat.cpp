@@ -4,12 +4,7 @@
 #include <net.h>
 #include <raylib.h>
 
-struct Message {
-    std::string username;
-    std::string body;
-};
-
-std::vector<Message> messages;
+std::vector<std::vector<uint8_t>> packets;
 
 // std::vector<Message> messages = {
 //     { "axewbotx", "hey everyone, testing the chat app" },
@@ -38,23 +33,10 @@ void layout::pages::chat(Document& doc, Context& ctx) {
     // to convert into miliseconds
     net::client::update((uint64_t)GetFrameTime() * 1000);
     // poll messages
-    for (auto curr_message : net::client::poll_messages()) {
-        auto msg = Message{};
-        const auto* packet = packet::GetPacket(curr_message.data.data());
-        auto packet_type = packet->data_type();
-        switch (packet_type) {
-            case (packet::Packet_Data_Message): {
-                const auto* data = packet->data_as_Message();
-                msg.username = std::string(data->username()->c_str());
-                msg.body = std::string(data->body()->c_str());
-                break;
-            }
-            default: {
-                msg.username = "invalid_packet_data_type";
-                msg.body = "invalid_packet_data_type";
-            }
-        }
-        messages.emplace_back(msg);
+    for (auto curr_packet : net::client::poll_packets()) {
+        packets.emplace_back(
+            std::vector(curr_packet.data.begin(), curr_packet.data.end())
+        );
     };
 
     CLAY(Clay_ElementDeclaration{
@@ -68,13 +50,55 @@ void layout::pages::chat(Document& doc, Context& ctx) {
                         .childGap = 16,
                         .layoutDirection = CLAY_TOP_TO_BOTTOM },
             .clip = { .vertical = true, .childOffset = Clay_GetScrollOffset() } }) {
-            for (auto curr_message : messages) {
-                auto client_username = net::client::get_username();
-                bool outgoing_message = curr_message.username
-                    == std::string(client_username.begin(), client_username.end());
-                layout::components::chat_bubble(
-                    doc, ctx, curr_message.username, curr_message.body, outgoing_message
-                );
+            for (auto curr_packet : packets) {
+                const auto* packet = packet::GetPacket(curr_packet.data());
+                auto packet_type = packet->data_type();
+                switch (packet_type) {
+                    case (packet::Packet_Data_Message): {
+                        const auto* message = packet->data_as_Message();
+                        std::string message_username =
+                            std::string(message->username()->c_str());
+                        std::string message_body = std::string(message->body()->c_str());
+
+                        auto client_username = net::client::get_username();
+                        bool outgoing_message = message_username
+                            == std::string(client_username.begin(),
+                                           client_username.end());
+
+                        layout::components::chat_bubble(doc, ctx, message_username, message_body, outgoing_message);
+                        break;
+                    }
+                    case (packet::Packet_Data_JoinEvent): {
+                        const auto* join_event = packet->data_as_JoinEvent();
+                        std::string username =
+                            std::string(join_event->username()->c_str());
+
+                        auto client_username = net::client::get_username();
+                        if (username
+                            != std::string(
+                                client_username.begin(), client_username.end()
+                            )) {
+                            layout::components::chat_event(doc, ctx, fmt::format("{} joined the server", username));
+                        }
+                        break;
+                    }
+                    case (packet::Packet_Data_LeaveEvent): {
+                        const auto* leave_event = packet->data_as_LeaveEvent();
+                        std::string username =
+                            std::string(leave_event->username()->c_str());
+
+                        auto client_username = net::client::get_username();
+                        if (username
+                            != std::string(
+                                client_username.begin(), client_username.end()
+                            )) {
+                            layout::components::chat_event(doc, ctx, fmt::format("{} left the server", username));
+                        }
+                        break;
+                    }
+                    default: {
+                    }
+                }
             }
         }
         CLAY(Clay_ElementDeclaration{

@@ -4,9 +4,17 @@ table Message {
 	username:string;
 	body:string;
 }
+table JoinEvent {
+	username:string;
+}
+table LeaveEvent {
+	username:string;
+}
 
 union Packet_Data {
 	Message,
+	JoinEvent,
+	LeaveEvent,
 }
 table Packet {
 	data:Packet_Data;

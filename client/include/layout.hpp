@@ -11,6 +11,7 @@ namespace layout {
         void chat_bubble(
             Document& doc, Context& ctx, const std::string& username, const std::string& body, bool outgoing_message
         );
+        void chat_event(Document& doc, Context& ctx, const std::string& body);
     }
     namespace pages {
         void debug(Document& doc, Context& ctx);

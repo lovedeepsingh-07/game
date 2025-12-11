@@ -1,12 +1,16 @@
 use crate::{constants, debug, packet};
 use renet;
 use renet_netcode as netcode;
-use std::sync::{Mutex, OnceLock};
+use std::{
+    collections::HashMap,
+    sync::{Mutex, OnceLock},
+};
 
 #[allow(non_camel_case_types)]
 struct Server_State {
     server: renet::RenetServer,
     transport: netcode::NetcodeServerTransport,
+    connected_clients: HashMap<u64, String>,
 }
 static SERVER_STATE: OnceLock<Mutex<Server_State>> = OnceLock::new();
 
@@ -30,13 +34,21 @@ pub fn server_setup(port: u16) {
     let transport = netcode::NetcodeServerTransport::new(server_config, socket).unwrap();
 
     SERVER_STATE
-        .set(Mutex::new(Server_State { server, transport }))
+        .set(Mutex::new(Server_State {
+            server,
+            transport,
+            connected_clients: HashMap::new(),
+        }))
         .ok();
 }
 pub fn server_update(delta_time_ms: u64) {
     let delta_time = std::time::Duration::from_millis(delta_time_ms);
     let mut mutex_gaurd = SERVER_STATE.get().unwrap().lock().unwrap();
-    let Server_State { server, transport } = &mut *mutex_gaurd;
+    let Server_State {
+        server,
+        transport,
+        connected_clients,
+    } = &mut *mutex_gaurd;
 
     server.update(delta_time);
     transport.update(delta_time, server).unwrap();
@@ -44,21 +56,71 @@ pub fn server_update(delta_time_ms: u64) {
     while let Some(event) = server.get_event() {
         match event {
             renet::ServerEvent::ClientConnected { client_id } => {
-                if let Some(user_data) = transport.user_data(client_id){
-                    let username = crate::from_user_data(&user_data);
-                    debug::info(format!("Client {} connected as {}", client_id, username).as_str());
-                } else {
-                    debug::info(format!("Client {} connected", client_id).as_str());
+                let mut username = client_id.to_string();
+
+                if let Some(user_data) = transport.user_data(client_id) {
+                    username = crate::from_user_data(&user_data);
                 }
+                debug::info(
+                    format!("Client ({}, {}) joined the server", &username, client_id).as_str(),
+                );
+
+                {
+                    let mut builder = flatbuffers::FlatBufferBuilder::with_capacity(1024);
+                    let join_username = builder.create_string(&username);
+                    let packet_data = packet::JoinEvent::create(
+                        &mut builder,
+                        &packet::JoinEventArgs {
+                            username: Some(join_username),
+                        },
+                    );
+                    let packet = packet::Packet::create(
+                        &mut builder,
+                        &packet::PacketArgs {
+                            data_type: packet::Packet_Data::JoinEvent,
+                            data: Some(packet_data.as_union_value()),
+                        },
+                    );
+                    builder.finish(packet, None);
+                    let buf = builder.finished_data().to_vec();
+                    server.broadcast_message(renet::DefaultChannel::ReliableOrdered, buf);
+                }
+                connected_clients.insert(client_id, username);
             }
             renet::ServerEvent::ClientDisconnected { client_id, reason } => {
+                let username = match connected_clients.remove(&client_id) {
+                    Some(out) => out,
+                    None => String::from("invalid_client"),
+                };
+
                 debug::info(
                     format!(
-                        "Client {} disconnected, for reason: {:#?}",
-                        client_id, reason
+                        "Client ({}, {}) left the server, for reason: {:#?}",
+                        &username, client_id, reason
                     )
                     .as_str(),
                 );
+
+                {
+                    let mut builder = flatbuffers::FlatBufferBuilder::with_capacity(1024);
+                    let leave_username = builder.create_string(&username);
+                    let packet_data = packet::LeaveEvent::create(
+                        &mut builder,
+                        &packet::LeaveEventArgs {
+                            username: Some(leave_username),
+                        },
+                    );
+                    let packet = packet::Packet::create(
+                        &mut builder,
+                        &packet::PacketArgs {
+                            data_type: packet::Packet_Data::LeaveEvent,
+                            data: Some(packet_data.as_union_value()),
+                        },
+                    );
+                    builder.finish(packet, None);
+                    let buf = builder.finished_data().to_vec();
+                    server.broadcast_message(renet::DefaultChannel::ReliableOrdered, buf);
+                }
             }
         }
     }
@@ -71,30 +133,25 @@ pub fn server_update(delta_time_ms: u64) {
             let packet = packet::root_as_packet(&message).unwrap();
             match packet.data_type() {
                 packet::Packet_Data::Message => {
-                     if let Some(data) = packet.data_as_message(){
-                         let username = match data.username() {
-                             Some(out) => out,
-                             None => {
-                                 "invalid_username"
-                             }
-                         };
-                         let message = match data.body() {
-                             Some(out) => out,
-                             None => {
-                                 "invalid_message"
-                             }
-                         };
-                        debug::info(format!("({}, {}): {:#?}", username, client_id, message).as_str());
-                     }
-                },
+                    if let Some(data) = packet.data_as_message() {
+                        let username = match data.username() {
+                            Some(out) => out,
+                            None => "invalid_username",
+                        };
+                        let message = match data.body() {
+                            Some(out) => out,
+                            None => "invalid_message",
+                        };
+                        debug::info(
+                            format!("({}, {}): {:#?}", username, client_id, message).as_str(),
+                        );
+                    }
+                }
                 _ => {
                     debug::error("invalid packet data type");
-                },
+                }
             }
-            server.broadcast_message(
-                renet::DefaultChannel::ReliableOrdered,
-                message,
-            );
+            server.broadcast_message(renet::DefaultChannel::ReliableOrdered, message);
         }
     }
     // if server.clients_id().len() > 0 {
@@ -106,6 +163,8 @@ pub fn server_update(delta_time_ms: u64) {
 }
 pub fn server_send_packets() {
     let mut mutex_gaurd = SERVER_STATE.get().unwrap().lock().unwrap();
-    let Server_State { server, transport } = &mut *mutex_gaurd;
+    let Server_State {
+        server, transport, ..
+    } = &mut *mutex_gaurd;
     transport.send_packets(server);
 }

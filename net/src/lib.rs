@@ -4,11 +4,17 @@ pub mod debug;
 pub mod server;
 
 use client::*;
-use server::*;
 use renet_netcode as netcode;
+use server::*;
 
 // NOTE: import the generated flatbuffer code by flatc
-#[allow(dead_code, unused_imports, unsafe_code, unsafe_op_in_unsafe_fn, non_camel_case_types)]
+#[allow(
+    dead_code,
+    unused_imports,
+    unsafe_code,
+    unsafe_op_in_unsafe_fn,
+    non_camel_case_types
+)]
 #[path = "./generated/packet_.rs"]
 mod packet_generated;
 pub use packet_generated::packet;
@@ -17,7 +23,7 @@ pub use packet_generated::packet;
 #[cxx::bridge(namespace = "net")]
 pub mod ffi {
     struct Message_Bytes {
-        pub data: Vec<u8>
+        pub data: Vec<u8>,
     }
 
     #[namespace = "net::server"]
@@ -44,8 +50,8 @@ pub mod ffi {
         fn connect(delta_time_ms: u64);
         #[rust_name = "client_update"]
         fn update(delta_time_ms: u64);
-        #[rust_name = "client_poll_messages"]
-        fn poll_messages() -> Vec<Message_Bytes>;
+        #[rust_name = "client_poll_packets"]
+        fn poll_packets() -> Vec<Message_Bytes>;
         #[rust_name = "client_send_message"]
         fn send_message(input: String);
         #[rust_name = "client_send_packets"]
