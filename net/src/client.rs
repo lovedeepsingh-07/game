@@ -1,4 +1,4 @@
-use crate::{constants, debug, packet};
+use crate::{constants, debug, packet, error};
 use flatbuffers;
 use rand;
 use renet;
@@ -15,13 +15,11 @@ struct Client_State {
 }
 static CLIENT_STATE: OnceLock<Mutex<Client_State>> = OnceLock::new();
 
-pub fn client_setup(username: String, address: String) {
+pub fn client_setup(username: String, address: String) -> Result<(), error::Error> {
     let client = renet::RenetClient::new(renet::ConnectionConfig::default());
 
-    let current_time = std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
-        .unwrap();
-    let server_address: std::net::SocketAddr = address.parse().unwrap();
+    let current_time = std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH)?;
+    let server_address: std::net::SocketAddr = address.parse()?;
 
     let authentication = netcode::ClientAuthentication::Unsecure {
         server_addr: server_address,
@@ -30,49 +28,73 @@ pub fn client_setup(username: String, address: String) {
         protocol_id: constants::PROTOCOL_ID,
     };
 
-    let socket = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+    let socket = std::net::UdpSocket::bind("127.0.0.1:0")?;
     let transport =
-        netcode::NetcodeClientTransport::new(current_time, authentication, socket).unwrap();
+        netcode::NetcodeClientTransport::new(current_time, authentication, socket)?;
 
-    CLIENT_STATE
+    match CLIENT_STATE
         .set(Mutex::new(Client_State {
             username,
             client,
             transport,
             connected: false,
             connection_start_time: None,
-        }))
-        .ok();
+        })) {
+            Ok(_) => {}
+            Err(_) => {
+                return Err(error::Error::StateError(String::from(
+                    "CLIENT_STATE is ALREADY initialized",
+                )));
+            }
+        }
+    Ok(())
 }
 
-pub fn client_get_username() -> String {
-    let mut mutex_gaurd = match CLIENT_STATE.get() {
+pub fn client_get_username() -> Result<String, error::Error> {
+    let cell_lock = match CLIENT_STATE.get() {
         Some(out) => out,
         None => {
-            return String::from("axewbotx");
-        }
-    }
-    .lock()
-    .unwrap();
+            return Err(error::Error::StateError(String::from(
+                "CLIENT_STATE is NOT initialized",
+            )));
+        },
+    };
+    let mut mutex_gaurd = cell_lock.lock()?;
     let Client_State { username, .. } = &mut *mutex_gaurd;
-    username.to_string()
+
+    Ok(username.to_string())
 }
 
 pub fn client_is_connected() -> bool {
-    let mut mutex_gaurd = CLIENT_STATE.get().unwrap().lock().unwrap();
+    let cell_lock = match CLIENT_STATE.get() {
+        Some(out) => out,
+        None => {
+            return false;
+        },
+    };
+    let mut mutex_gaurd = match cell_lock.lock(){
+        Ok(out) => out,
+        Err(_) => {
+            return false;
+       }
+    };
     let Client_State { connected, .. } = &mut *mutex_gaurd;
     return *connected;
 }
 
 pub fn client_is_connecting() -> bool {
-    let mut mutex_gaurd = match CLIENT_STATE.get() {
+    let cell_lock = match CLIENT_STATE.get() {
         Some(out) => out,
         None => {
             return false;
+        },
+    };
+    let mut mutex_gaurd = match cell_lock.lock() {
+        Ok(out) => out,
+        Err(_) => {
+            return false;
         }
-    }
-    .lock()
-    .unwrap();
+    };
     let Client_State {
         connected,
         connection_start_time,
@@ -84,9 +106,17 @@ pub fn client_is_connecting() -> bool {
     return false;
 }
 
-pub fn client_connect(delta_time_ms: u64) {
+pub fn client_connect(delta_time_ms: u64) -> Result<(), error::Error> {
     let delta_time = std::time::Duration::from_millis(delta_time_ms);
-    let mut mutex_gaurd = CLIENT_STATE.get().unwrap().lock().unwrap();
+    let cell_lock = match CLIENT_STATE.get() {
+        Some(out) => out,
+        None => {
+            return Err(error::Error::StateError(String::from(
+                "CLIENT_STATE is NOT initialized",
+            )));
+        },
+    };
+    let mut mutex_gaurd = cell_lock.lock()?;
     let Client_State {
         client,
         transport,
@@ -104,7 +134,7 @@ pub fn client_connect(delta_time_ms: u64) {
             if start_time.elapsed() > constants::CLIENT_CONNECT_TIMEOUT {
                 *connection_start_time = None;
                 debug::error("failed to connect to server, timed out");
-                return;
+                return Ok(());
             }
         }
 
@@ -117,24 +147,43 @@ pub fn client_connect(delta_time_ms: u64) {
         };
 
         *connected = client.is_connected();
-        return;
+        return Ok(());
     }
+    Ok(())
 }
 
-pub fn client_update(delta_time_ms: u64) {
+pub fn client_update(delta_time_ms: u64) -> Result<(), error::Error> {
     let delta_time = std::time::Duration::from_millis(delta_time_ms);
 
-    let mut mutex_gaurd = CLIENT_STATE.get().unwrap().lock().unwrap();
+    let cell_lock = match CLIENT_STATE.get() {
+        Some(out) => out,
+        None => {
+            return Err(error::Error::StateError(String::from(
+                "CLIENT_STATE is NOT initialized",
+            )));
+        },
+    };
+    let mut mutex_gaurd = cell_lock.lock()?;
     let Client_State {
         client, transport, ..
     } = &mut *mutex_gaurd;
 
     client.update(delta_time);
-    transport.update(delta_time, client).unwrap();
+    transport.update(delta_time, client)?;
+
+    Ok(())
 }
 
-pub fn client_poll_packets() -> Vec<crate::ffi::Message_Bytes> {
-    let mut mutex_gaurd = CLIENT_STATE.get().unwrap().lock().unwrap();
+pub fn client_poll_packets() -> Result<Vec<crate::ffi::Message_Bytes>, error::Error> {
+    let cell_lock = match CLIENT_STATE.get() {
+        Some(out) => out,
+        None => {
+            return Err(error::Error::StateError(String::from(
+                "CLIENT_STATE is NOT initialized",
+            )));
+        },
+    };
+    let mut mutex_gaurd = cell_lock.lock()?;
     let Client_State { client, .. } = &mut *mutex_gaurd;
 
     let mut output: Vec<crate::ffi::Message_Bytes> = Vec::new();
@@ -143,11 +192,19 @@ pub fn client_poll_packets() -> Vec<crate::ffi::Message_Bytes> {
             data: message.to_vec(),
         });
     }
-    return output;
+    return Ok(output);
 }
 
-pub fn client_send_message(input: String) {
-    let mut mutex_gaurd = CLIENT_STATE.get().unwrap().lock().unwrap();
+pub fn client_send_message(input: String) -> Result<(), error::Error> {
+    let cell_lock = match CLIENT_STATE.get() {
+        Some(out) => out,
+        None => {
+            return Err(error::Error::StateError(String::from(
+                "CLIENT_STATE is NOT initialized",
+            )));
+        },
+    };
+    let mut mutex_gaurd = cell_lock.lock()?;
     let Client_State {
         client, username, ..
     } = &mut *mutex_gaurd;
@@ -174,12 +231,22 @@ pub fn client_send_message(input: String) {
         let buf = builder.finished_data().to_vec();
         client.send_message(renet::DefaultChannel::ReliableOrdered, buf);
     }
+    Ok(())
 }
 
-pub fn client_send_packets() {
-    let mut mutex_gaurd = CLIENT_STATE.get().unwrap().lock().unwrap();
+pub fn client_send_packets() -> Result<(), error::Error> {
+    let cell_lock = match CLIENT_STATE.get() {
+        Some(out) => out,
+        None => {
+            return Err(error::Error::StateError(String::from(
+                "CLIENT_STATE is NOT initialized",
+            )));
+        },
+    };
+    let mut mutex_gaurd = cell_lock.lock()?;
     let Client_State {
         client, transport, ..
     } = &mut *mutex_gaurd;
-    transport.send_packets(client).unwrap();
+    transport.send_packets(client)?;
+    Ok(())
 }

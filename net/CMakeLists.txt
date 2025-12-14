@@ -36,6 +36,7 @@ file(GLOB_RECURSE CARGO_SRC_FILES
 set(NET_CXX "${CMAKE_BINARY_DIR}/net.cpp")
 set(NET_H "${CMAKE_BINARY_DIR}/net.h")
 set(NET_LIB "${CARGO_BUILD_DIR}/${CARGO_PROFILE_DIR}/libnet.a")
+set(CXX_H "${CMAKE_BINARY_DIR}/rust/cxx.h")
 
 # cargo build command
 add_custom_command(
@@ -44,6 +45,8 @@ add_custom_command(
 
 	COMMAND cp ${CARGO_BUILD_DIR}/cxxbridge/net/src/lib.rs.cc ${NET_CXX}
 	COMMAND cp ${CARGO_BUILD_DIR}/cxxbridge/net/src/lib.rs.h ${NET_H}
+	COMMAND mkdir -p ${CMAKE_BINARY_DIR}/rust
+	COMMAND cp -r ${CARGO_BUILD_DIR}/cxxbridge/rust/cxx.h ${CXX_H}
 
 	DEPENDS ${CARGO_SRC_FILES}
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}

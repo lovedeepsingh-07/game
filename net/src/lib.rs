@@ -1,6 +1,7 @@
 pub mod client;
 pub mod constants;
 pub mod debug;
+pub mod error;
 pub mod server;
 
 use client::*;
@@ -29,33 +30,33 @@ pub mod ffi {
     #[namespace = "net::server"]
     extern "Rust" {
         #[rust_name = "server_setup"]
-        fn setup(port: u16);
+        fn setup(port: u16) -> Result<()>;
         #[rust_name = "server_update"]
-        fn update(delta_time_ms: u64);
+        fn update(delta_time_ms: u64) -> Result<()>;
         #[rust_name = "server_send_packets"]
-        fn send_packets();
+        fn send_packets() -> Result<()>;
     }
 
     #[namespace = "net::client"]
     extern "Rust" {
         #[rust_name = "client_setup"]
-        fn setup(username: String, address: String);
+        fn setup(username: String, address: String) -> Result<()>;
         #[rust_name = "client_get_username"]
-        fn get_username() -> String;
+        fn get_username() -> Result<String>;
         #[rust_name = "client_is_connected"]
         fn is_connected() -> bool;
         #[rust_name = "client_is_connecting"]
         fn is_connecting() -> bool;
         #[rust_name = "client_connect"]
-        fn connect(delta_time_ms: u64);
+        fn connect(delta_time_ms: u64) -> Result<()>;
         #[rust_name = "client_update"]
-        fn update(delta_time_ms: u64);
+        fn update(delta_time_ms: u64) -> Result<()>;
         #[rust_name = "client_poll_packets"]
-        fn poll_packets() -> Vec<Message_Bytes>;
+        fn poll_packets() -> Result<Vec<Message_Bytes>>;
         #[rust_name = "client_send_message"]
-        fn send_message(input: String);
+        fn send_message(input: String) -> Result<()>;
         #[rust_name = "client_send_packets"]
-        fn send_packets();
+        fn send_packets() -> Result<()>;
     }
 }
 

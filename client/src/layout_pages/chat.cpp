@@ -1,8 +1,10 @@
 #include "layout.hpp"
+#include <common/error.hpp>
 #include <common/theme_engine.hpp>
 #include <generated/packet_.h>
 #include <net.h>
 #include <raylib.h>
+#include <rust/cxx.h>
 
 std::vector<std::vector<uint8_t>> packets;
 
@@ -31,13 +33,27 @@ void layout::pages::chat(Document& doc, Context& ctx) {
     // update client
     // NOTE: GetFrameTime() returns seconds like "0.016" so we multiply by 1000
     // to convert into miliseconds
-    net::client::update((uint64_t)GetFrameTime() * 1000);
-    // poll messages
-    for (auto curr_packet : net::client::poll_packets()) {
-        packets.emplace_back(
-            std::vector(curr_packet.data.begin(), curr_packet.data.end())
+    try {
+        net::client::update((uint64_t)GetFrameTime() * 1000);
+    } catch (rust::Error e) {
+        common::error(fmt::format(
+            "failed to update the client, {}", error::Error::from_rust(e).to_string()
+        ));
+        std::exit(1);
+    }
+    // poll packets
+    try {
+        for (auto curr_packet : net::client::poll_packets()) {
+            packets.emplace_back(
+                std::vector(curr_packet.data.begin(), curr_packet.data.end())
+            );
+        };
+    } catch (rust::Error e) {
+        common::error(
+            fmt::format("failed to poll packets, {}", error::Error::from_rust(e).to_string())
         );
-    };
+        std::exit(1);
+    }
 
     CLAY(Clay_ElementDeclaration{
         .layout = { .sizing = { .width = CLAY_SIZING_GROW(), .height = CLAY_SIZING_GROW() },
@@ -60,12 +76,20 @@ void layout::pages::chat(Document& doc, Context& ctx) {
                             std::string(message->username()->c_str());
                         std::string message_body = std::string(message->body()->c_str());
 
-                        auto client_username = net::client::get_username();
-                        bool outgoing_message = message_username
-                            == std::string(client_username.begin(),
-                                           client_username.end());
+                        try {
+                            auto client_username = net::client::get_username();
+                            bool outgoing_message = message_username
+                                == std::string(client_username.begin(),
+                                               client_username.end());
 
-                        layout::components::chat_bubble(doc, ctx, message_username, message_body, outgoing_message);
+                            layout::components::chat_bubble(doc, ctx, message_username, message_body, outgoing_message);
+                        } catch (rust::Error e) {
+                            common::error(fmt::format(
+                                "failed to get the client username, {}",
+                                error::Error::from_rust(e).to_string()
+                            ));
+                            std::exit(1);
+                        }
                         break;
                     }
                     case (packet::Packet_Data_JoinEvent): {
@@ -73,12 +97,20 @@ void layout::pages::chat(Document& doc, Context& ctx) {
                         std::string username =
                             std::string(join_event->username()->c_str());
 
-                        auto client_username = net::client::get_username();
-                        if (username
-                            != std::string(
-                                client_username.begin(), client_username.end()
-                            )) {
-                            layout::components::chat_event(doc, ctx, fmt::format("{} joined the server", username));
+                        try {
+                            auto client_username = net::client::get_username();
+                            if (username
+                                != std::string(
+                                    client_username.begin(), client_username.end()
+                                )) {
+                                layout::components::chat_event(doc, ctx, fmt::format("{} joined the server", username));
+                            }
+                        } catch (rust::Error e) {
+                            common::error(fmt::format(
+                                "failed to get the client username, {}",
+                                error::Error::from_rust(e).to_string()
+                            ));
+                            std::exit(1);
                         }
                         break;
                     }
@@ -87,12 +119,20 @@ void layout::pages::chat(Document& doc, Context& ctx) {
                         std::string username =
                             std::string(leave_event->username()->c_str());
 
-                        auto client_username = net::client::get_username();
-                        if (username
-                            != std::string(
-                                client_username.begin(), client_username.end()
-                            )) {
-                            layout::components::chat_event(doc, ctx, fmt::format("{} left the server", username));
+                        try {
+                            auto client_username = net::client::get_username();
+                            if (username
+                                != std::string(
+                                    client_username.begin(), client_username.end()
+                                )) {
+                                layout::components::chat_event(doc, ctx, fmt::format("{} left the server", username));
+                            }
+                        } catch (rust::Error e) {
+                            common::error(fmt::format(
+                                "failed to get the client username, {}",
+                                error::Error::from_rust(e).to_string()
+                            ));
+                            std::exit(1);
                         }
                         break;
                     }
@@ -115,8 +155,16 @@ void layout::pages::chat(Document& doc, Context& ctx) {
                     std::string message_input =
                         common::trim_whitespace(message_element->value);
                     if (message_input.size() != 0) {
-                        net::client::send_message(message_input);
-                        message_element->value = "";
+                        try {
+                            net::client::send_message(message_input);
+                            message_element->value = "";
+                        } catch (rust::Error e) {
+                            common::error(fmt::format(
+                                "failed to send message, {}",
+                                error::Error::from_rust(e).to_string()
+                            ));
+                            std::exit(1);
+                        }
                     }
                 }
             };
@@ -124,5 +172,13 @@ void layout::pages::chat(Document& doc, Context& ctx) {
     }
 
     // sync to server
-    net::client::send_packets();
+    try {
+        net::client::send_packets();
+    } catch (rust::Error e) {
+        common::error(fmt::format(
+            "failed to send packets to the server, {}",
+            error::Error::from_rust(e).to_string()
+        ));
+        std::exit(1);
+    }
 }

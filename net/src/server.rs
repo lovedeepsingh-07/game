@@ -1,4 +1,4 @@
-use crate::{constants, debug, packet};
+use crate::{constants, debug, error, packet};
 use renet;
 use renet_netcode as netcode;
 use std::{
@@ -14,13 +14,12 @@ struct Server_State {
 }
 static SERVER_STATE: OnceLock<Mutex<Server_State>> = OnceLock::new();
 
-pub fn server_setup(port: u16) {
+pub fn server_setup(port: u16) -> Result<(), error::Error> {
     let server = renet::RenetServer::new(renet::ConnectionConfig::default());
 
-    let current_time = std::time::SystemTime::now()
-        .duration_since(std::time::SystemTime::UNIX_EPOCH)
-        .unwrap();
-    let server_address: std::net::SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
+    let current_time =
+        std::time::SystemTime::now().duration_since(std::time::SystemTime::UNIX_EPOCH)?;
+    let server_address: std::net::SocketAddr = format!("127.0.0.1:{}", port).parse()?;
 
     let server_config = netcode::ServerConfig {
         current_time,
@@ -30,20 +29,35 @@ pub fn server_setup(port: u16) {
         authentication: netcode::ServerAuthentication::Unsecure,
     };
 
-    let socket: std::net::UdpSocket = std::net::UdpSocket::bind(server_address).unwrap();
-    let transport = netcode::NetcodeServerTransport::new(server_config, socket).unwrap();
+    let socket: std::net::UdpSocket = std::net::UdpSocket::bind(server_address)?;
+    let transport = netcode::NetcodeServerTransport::new(server_config, socket)?;
 
-    SERVER_STATE
-        .set(Mutex::new(Server_State {
-            server,
-            transport,
-            connected_clients: HashMap::new(),
-        }))
-        .ok();
+    match SERVER_STATE.set(Mutex::new(Server_State {
+        server,
+        transport,
+        connected_clients: HashMap::new(),
+    })) {
+        Ok(_) => {}
+        Err(_) => {
+            return Err(error::Error::StateError(String::from(
+                "SERVER_STATE is ALREADY initialized",
+            )));
+        }
+    };
+
+    Ok(())
 }
-pub fn server_update(delta_time_ms: u64) {
+pub fn server_update(delta_time_ms: u64) -> Result<(), error::Error> {
     let delta_time = std::time::Duration::from_millis(delta_time_ms);
-    let mut mutex_gaurd = SERVER_STATE.get().unwrap().lock().unwrap();
+    let cell_lock = match SERVER_STATE.get() {
+        Some(out) => out,
+        None => {
+            return Err(error::Error::StateError(String::from(
+                "SERVER_STATE is NOT initialized",
+            )));
+        },
+    };
+    let mut mutex_gaurd = cell_lock.lock()?;
     let Server_State {
         server,
         transport,
@@ -51,7 +65,7 @@ pub fn server_update(delta_time_ms: u64) {
     } = &mut *mutex_gaurd;
 
     server.update(delta_time);
-    transport.update(delta_time, server).unwrap();
+    transport.update(delta_time, server)?;
 
     while let Some(event) = server.get_event() {
         match event {
@@ -130,7 +144,7 @@ pub fn server_update(delta_time_ms: u64) {
             server.receive_message(client_id, renet::DefaultChannel::ReliableOrdered)
         {
             // decode message from flatbuffers's bytes
-            let packet = packet::root_as_packet(&message).unwrap();
+            let packet = packet::root_as_packet(&message)?;
             match packet.data_type() {
                 packet::Packet_Data::Message => {
                     if let Some(data) = packet.data_as_message() {
@@ -160,11 +174,23 @@ pub fn server_update(delta_time_ms: u64) {
     //         "a message from the server",
     //     );
     // }
+    Ok(())
 }
-pub fn server_send_packets() {
-    let mut mutex_gaurd = SERVER_STATE.get().unwrap().lock().unwrap();
+pub fn server_send_packets() -> Result<(), error::Error> {
+    let cell_lock = match SERVER_STATE.get() {
+        Some(out) => out,
+        None => {
+            return Err(error::Error::StateError(String::from(
+                "SERVER_STATE is NOT initialized",
+            )));
+        },
+    };
+    let mut mutex_gaurd = cell_lock.lock()?;
     let Server_State {
-        server, transport, ..
+        server,
+        transport,
+        ..
     } = &mut *mutex_gaurd;
     transport.send_packets(server);
+    Ok(())
 }

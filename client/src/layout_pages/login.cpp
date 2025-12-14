@@ -1,7 +1,9 @@
 #include "layout.hpp"
+#include <common/error.hpp>
 #include <common/theme_engine.hpp>
 #include <net.h>
 #include <raylib.h>
+#include <rust/cxx.h>
 
 constexpr int min_card_width = 320;
 bool trying_to_connect = false;
@@ -10,12 +12,28 @@ void layout::pages::login(Document& doc, Context& ctx) {
     // attempt a connection to the server
     if (trying_to_connect) {
         // NOTE: GetFrameTime() returns seconds like "0.016" so we multiply by 1000 to convert into miliseconds
-        net::client::connect((uint64_t)GetFrameTime() * 1000.0F);
+        try {
+            net::client::connect((uint64_t)GetFrameTime() * 1000.0F);
+        } catch (rust::Error e) {
+            common::error(fmt::format(
+                "failed to connect to the server, {}",
+                error::Error::from_rust(e).to_string()
+            ));
+            std::exit(1);
+        }
         if (net::client::is_connected()) {
             trying_to_connect = false;
             doc.set_curr_page("chat");
         }
-        net::client::send_packets();
+        try {
+            net::client::send_packets();
+        } catch (rust::Error e) {
+            common::error(fmt::format(
+                "failed to send packets to the server, {}",
+                error::Error::from_rust(e).to_string()
+            ));
+            std::exit(1);
+        }
     }
 
     CLAY(Clay_ElementDeclaration{
@@ -63,7 +81,15 @@ void layout::pages::login(Document& doc, Context& ctx) {
                 if (username_input.size() == 0 || address_input.size() == 0) {
                     common::error("username or address cannot be empty");
                 } else {
-                    net::client::setup(username_input, address_input);
+                    try {
+                        net::client::setup(username_input, address_input);
+                    } catch (rust::Error e) {
+                        common::error(fmt::format(
+                            "failed to setup the client, {}",
+                            error::Error::from_rust(e).to_string()
+                        ));
+                        std::exit(1);
+                    }
                     trying_to_connect = true;
                 }
             };
