@@ -11,6 +11,6 @@ pub fn warn(input: &str) {
     println!("{} {}", flag_str, input);
 }
 pub fn error(input: &str) {
-    let flag_str = "\x1b[91m[BET_ERROR]\x1b[0m";
+    let flag_str = "\x1b[91m[NET_ERROR]\x1b[0m";
     println!("{} {}", flag_str, input);
 }
