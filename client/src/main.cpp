@@ -6,7 +6,8 @@
 #include <clay_raylib.hpp>
 
 int main() {
-    Clay_Raylib_Initialize(540, 750, "boron", FLAG_WINDOW_RESIZABLE);
+    SetTraceLogLevel(LOG_ERROR);
+    Clay_Raylib_Initialize(540, 750, "boron", FLAG_WINDOW_RESIZABLE | FLAG_WINDOW_HIGHDPI);
     SetTargetFPS(constants::TARGET_FPS);
 
     // clay setup

@@ -1,10 +1,35 @@
 #include "debug.hpp"
+#include "error.hpp"
 #include "layout.hpp"
 #include "theme_engine.hpp"
+#include <net.h>
+#include <raylib.h>
 
 constexpr int min_card_width = 320;
+bool trying_to_connect = false;
 
 void layout::pages::login(Document& doc, Context& ctx) {
+    if (trying_to_connect) {
+        // ------ net::connect_client() ------
+        try {
+            net::connect_client((uint64_t)GetFrameTime() * 1000.0F);
+        } catch (rust::Error e) {
+            auto err = error::Error::from_rust(e);
+            if (err.kind == error::Error::Kind::AuthError) {
+                debug::error(fmt::format("Failed to connect to the server, {}", err.to_string()));
+                debug::info("Try using a different username");
+                // ------ net::reset_client() ------
+                try {
+                    net::reset_client();
+                } catch (rust::Error e) {
+                    auto err = error::Error::from_rust(e);
+                    debug::error(fmt::format("Failed to reset the client state, {}", err.to_string()));
+                }
+                // ------ net::reset_client() ------
+            }
+        }
+        // ------ net::connect_client() ------
+    }
     CLAY(Clay_ElementDeclaration{
         .layout = { .sizing = { .width = CLAY_SIZING_GROW(), .height = CLAY_SIZING_GROW() },
                     .padding = { .top = 160 },
@@ -35,19 +60,26 @@ void layout::pages::login(Document& doc, Context& ctx) {
                             .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_TOP },
                             .layoutDirection = CLAY_TOP_TO_BOTTOM } }) {
                 layout::components::login_input(doc, ctx, "username_input", "Username");
-                layout::components::login_input(doc, ctx, "address_input", "Address");
             }
             if (layout::components::login_button(doc, ctx, "login_button", "Login")) {
                 std::string username_input = app_utils::trim_whitespace(
                     doc.get_element<elements::Input>("username_input")->value
                 );
-                std::string address_input = app_utils::trim_whitespace(
-                    doc.get_element<elements::Input>("address_input")->value
-                );
-                if (username_input.size() == 0 || address_input.size() == 0) {
-                    debug::error("username or address cannot be empty");
+                if (username_input.size() < 8) {
+                    debug::error("Username should be atleast 8 characters long");
                 } else {
-                    debug::info(fmt::format("username, address: ({}, {})", username_input, address_input));
+                    // ------ net::setup_client() ------
+                    try {
+                        net::setup_client(username_input);
+                    } catch (rust::Error e) {
+                        auto err = error::Error::from_rust(e);
+                        if (err.kind != error::Error::Kind::StateAlreadyInitializedError) {
+                            debug::error(fmt::format("Failed to setup the client, {}", err.to_string()));
+                            std::exit(1);
+                        }
+                    }
+                    // ------ net::setup_client() ------
+                    trying_to_connect = true;
                 }
             };
         }

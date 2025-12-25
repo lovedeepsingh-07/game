@@ -1,5 +1,5 @@
 BINARY_NAME := "boron"
-TOOLCHAIN_FILE := env_var('PWD') + "/.build/mingw-w64-toolchain.cmake"
+TOOLCHAIN_FILE := env_var('PWD') + "/.cmake/mingw-w64-toolchain.cmake"
 
 build:
 	@mkdir -p build/windows
