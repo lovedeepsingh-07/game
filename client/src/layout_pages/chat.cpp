@@ -1,9 +1,21 @@
 #include "debug.hpp"
+#include "error.hpp"
 #include "layout.hpp"
 #include "theme_engine.hpp"
+#include <net.h>
 #include <raylib.h>
 
 void layout::pages::chat(Document& doc, Context& ctx) {
+    // ------ net::update ------
+    try {
+        net::update_client((uint64_t)GetFrameTime() * 1000);
+    } catch (rust::Error e) {
+        auto err = error::Error::from_rust(e);
+        debug::error(fmt::format("Failed to update the client, {}", err.to_string()));
+        std::exit(1);
+    }
+    // ------ net::update ------
+
     CLAY(Clay_ElementDeclaration{
         .layout = { .sizing = { .width = CLAY_SIZING_GROW(), .height = CLAY_SIZING_GROW() },
                     .childAlignment = { .x = CLAY_ALIGN_X_CENTER, .y = CLAY_ALIGN_Y_TOP },
@@ -29,11 +41,27 @@ void layout::pages::chat(Document& doc, Context& ctx) {
                     std::string message_input =
                         app_utils::trim_whitespace(message_element->value);
                     if (message_input.size() != 0) {
-                        debug::info(fmt::format("user said message: {}", message_input));
-                        message_element->value = "";
+                        try {
+                            net::send_message(message_input);
+                            message_element->value = "";
+                        } catch (rust::Error e) {
+                            auto err = error::Error::from_rust(e);
+                            debug::error(fmt::format("Failed to send message, {}", err.to_string()));
+                            std::exit(1);
+                        }
                     }
                 }
             };
         }
     }
+
+    // ------ net::send_packets ------
+    try {
+        net::send_packets();
+    } catch (rust::Error e) {
+        auto err = error::Error::from_rust(e);
+        debug::error(fmt::format("Failed to send packets to the server, {}", err.to_string()));
+        std::exit(1);
+    }
+    // ------ net::send_packets ------
 }

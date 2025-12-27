@@ -3,10 +3,10 @@ mod error;
 mod state;
 mod update;
 
+use boron_common::debug;
 use connect::*;
 use state::*;
 use update::*;
-use boron_common::debug;
 
 #[cxx::bridge(namespace = "net")]
 pub mod ffi {
@@ -17,6 +17,7 @@ pub mod ffi {
         fn is_client_connecting() -> bool;
         fn connect_client(delta_time_ms: u64) -> Result<()>;
         fn update_client(elta_time_ms: u64) -> Result<()>;
+        fn send_message(input: String) -> Result<()>;
         fn send_packets() -> Result<()>;
     }
 }
@@ -32,7 +33,7 @@ pub fn is_client_connected() -> bool {
     match *client_state {
         Some(ref client_state) => {
             return client_state.connected;
-        },
+        }
         None => {
             return false;
         }

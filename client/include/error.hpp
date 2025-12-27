@@ -15,6 +15,10 @@ namespace error {
             IOError,
             UreqError,
             NetcodeError,
+            TimeOutError,
+            TransportError,
+            SystemTimeError,
+            ParseError,
         } kind;
         std::string message;
 

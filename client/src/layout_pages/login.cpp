@@ -29,6 +29,21 @@ void layout::pages::login(Document& doc, Context& ctx) {
             }
         }
         // ------ net::connect_client() ------
+        if (net::is_client_connected()) {
+            trying_to_connect = false;
+            doc.set_curr_page("chat");
+        }
+        // ------ net::send_packets() ------
+        try {
+            net::send_packets();
+        } catch (rust::Error e) {
+            auto err = error::Error::from_rust(e);
+            if (err.kind != error::Error::Kind::StateNotInitializedError) {
+                debug::error(fmt::format("Failed to send packets to the server, {}", err.to_string()));
+                std::exit(1);
+            }
+        }
+        // ------ net::send_packets() ------
     }
     CLAY(Clay_ElementDeclaration{
         .layout = { .sizing = { .width = CLAY_SIZING_GROW(), .height = CLAY_SIZING_GROW() },
@@ -61,7 +76,8 @@ void layout::pages::login(Document& doc, Context& ctx) {
                             .layoutDirection = CLAY_TOP_TO_BOTTOM } }) {
                 layout::components::login_input(doc, ctx, "username_input", "Username");
             }
-            if (layout::components::login_button(doc, ctx, "login_button", "Login")) {
+            if (layout::components::login_button(doc, ctx, "login_button", net::is_client_connecting() ? "Connecting..." : "Login")
+                && !trying_to_connect) {
                 std::string username_input = app_utils::trim_whitespace(
                     doc.get_element<elements::Input>("username_input")->value
                 );

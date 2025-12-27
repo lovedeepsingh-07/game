@@ -23,6 +23,18 @@ std::string error::Error::to_string() const {
     if (this->kind == Kind::NetcodeError) {
         return fmt::format("NetcodeError: {}", this->message);
     }
+    if (this->kind == Kind::TimeOutError) {
+        return fmt::format("TimeOutError: {}", this->message);
+    }
+    if (this->kind == Kind::TransportError) {
+        return fmt::format("TransportError: {}", this->message);
+    }
+    if (this->kind == Kind::SystemTimeError) {
+        return fmt::format("SystemTimeError: {}", this->message);
+    }
+    if (this->kind == Kind::ParseError) {
+        return fmt::format("ParseError: {}", this->message);
+    }
     return "InvalidErrorConversion";
 }
 

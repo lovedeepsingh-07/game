@@ -50,9 +50,10 @@ pub fn run(state: Arc<RwLock<state::ServerState>>) -> Result<(), error::Error> {
         }
 
         for client_id in server.clients_id() {
-            while let Some(_) =
+            while let Some(message) =
                 server.receive_message(client_id, renet::DefaultChannel::ReliableOrdered)
             {
+                debug::info(&format!("({}): {}", client_id, String::from_utf8(message.to_vec()).unwrap()));
             }
         }
 
