@@ -14,7 +14,7 @@ async fn login_route(
     axum::extract::State(state): axum::extract::State<Arc<RwLock<state::ServerState>>>,
     axum::extract::Json(login_data): axum::extract::Json<LoginData>,
 ) -> impl IntoResponse {
-    let state = match state.read() {
+    let server_state = match state.read() {
         Ok(out) => out,
         Err(e) => {
             let err = error::Error::from(e);
@@ -27,7 +27,7 @@ async fn login_route(
     };
     let (reply_sender, reply_receiver) = crossbeam::channel::unbounded::<command::CommandReply>();
 
-    match state.sender.send(command::Command::Login {
+    match server_state.sender.send(command::Command::Login {
         client_id: login_data.client_id,
         username: login_data.username,
         reply_sender,

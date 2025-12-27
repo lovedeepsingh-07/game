@@ -4,7 +4,7 @@ use renet_netcode as netcode;
 use std::sync::{Arc, RwLock};
 
 pub fn run(state: Arc<RwLock<state::ServerState>>) -> Result<(), error::Error> {
-    let state = state.read()?;
+    let server_state = state.read()?;
     let mut game_state = state::GameState::default();
 
     debug::debug(&format!(
@@ -30,12 +30,12 @@ pub fn run(state: Arc<RwLock<state::ServerState>>) -> Result<(), error::Error> {
     let mut transport = netcode::NetcodeServerTransport::new(server_config, socket)?;
 
     loop {
-        match state.receiver.try_recv() {
+        match server_state.receiver.try_recv() {
             Ok(cmd) => command::handle(&mut game_state, cmd)?,
             Err(crossbeam::channel::TryRecvError::Empty) => {}
             Err(crossbeam::channel::TryRecvError::Disconnected) => {
                 return Err(error::Error::ChannelReceiveError(String::from(
-                    "failed to receive commands, channel is closed",
+                    "Failed to receive commands, channel is closed",
                 )));
             }
         }
@@ -84,6 +84,12 @@ pub fn run(state: Arc<RwLock<state::ServerState>>) -> Result<(), error::Error> {
                             return Err(error::Error::StateError("client with that client_id does not exist, i.e is not logged-in".to_string()));
                         },
                     };
+
+                    server_state.sender.send(command::Command::Disconnect {
+                        client_id: client_data.id,
+                        username: client_data.username.clone()
+                    })?;
+
                     debug::info(
                         &format!(
                             "Client ({}, {}) left the server, for reason: {:#?}",

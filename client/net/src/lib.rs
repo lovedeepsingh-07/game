@@ -18,6 +18,7 @@ pub mod ffi {
     extern "Rust" {
         fn setup_client(username: String) -> Result<()>;
         fn reset_client() -> Result<()>;
+        fn disconnect_client() -> Result<()>;
         fn get_client_username() -> String;
         fn is_client_connected() -> bool;
         fn is_client_connecting() -> bool;
@@ -27,6 +28,16 @@ pub mod ffi {
         fn send_message(input: String) -> Result<()>;
         fn send_packets() -> Result<()>;
     }
+}
+
+pub fn disconnect_client() -> Result<(), error::Error> {
+    let mut write_guard = state::CLIENT_STATE.write()?;
+    let client_state = write_guard
+        .as_mut()
+        .ok_or(error::Error::StateNotInitializedError)?;
+
+    client_state.client.disconnect();
+    Ok(())
 }
 
 pub fn get_client_username() -> String {

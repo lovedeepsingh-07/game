@@ -1,9 +1,12 @@
 #include "app_utils.hpp"
 #include "constants.hpp"
 #include "context.hpp"
+#include "debug.hpp"
+#include "error.hpp"
 #include "layout.hpp"
 #include <array>
 #include <clay_raylib.hpp>
+#include <net.h>
 
 int main() {
     SetTraceLogLevel(LOG_ERROR);
@@ -93,5 +96,17 @@ int main() {
     for (auto& curr_font : font_list) {
         UnloadFont(curr_font);
     }
+
+    // ------ net::disconnect_client ------
+    try {
+        net::disconnect_client();
+        net::update_client((uint64_t)GetFrameTime() * 1000);
+        net::send_packets();
+    } catch (rust::Error e) {
+        auto err = error::Error::from_rust(e);
+        debug::error(fmt::format("Failed to disconnect the client, {}", err.to_string()));
+    }
+    // ------ net::disconnect_client ------
+
     return 0;
 }

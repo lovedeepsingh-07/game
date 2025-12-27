@@ -7,6 +7,10 @@ pub enum Command {
         username: String,
         reply_sender: crossbeam::channel::Sender<CommandReply>,
     },
+    Disconnect {
+        client_id: u64,
+        username: String,
+    }
 }
 
 #[allow(non_camel_case_types)]
@@ -48,6 +52,13 @@ pub fn handle(
             } else {
                 reply_sender.send(command::CommandReply::Login_InvalidUsername)?;
             }
+        },
+        command::Command::Disconnect {
+            client_id,
+            username
+        } => {
+            let _ = game_state.client_list.remove(&client_id);
+            let _ = game_state.usernames_in_use.remove(&username);
         }
     };
     Ok(())
